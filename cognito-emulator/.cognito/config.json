@@ -1,0 +1,31 @@
+{
+  "LambdaClient": {
+    "credentials": {
+      "accessKeyId": "local",
+      "secretAccessKey": "local"
+    },
+    "region": "us-east-1",
+    "endpoint": "http://127.0.0.1:3001"
+  },
+  "TokenConfig": {
+    "IssuerDomain": "http://0.0.0.0:9229"
+  },
+  "TriggerFunctions": {
+    "PostConfirmation": "PostVerificationLambdaFunction",
+    "PreTokenGeneration": "PreAuthenticationLambdaFunction",
+    "CustomMessage": "CustomMessageLambdaFunction",
+    "PostAuthentication": "PostAuthenticationLambdaFunction"
+  },
+  "UserPoolDefaults": {
+    "UsernameAttributes": [
+      "sub"
+    ]
+  },
+  "KMSConfig": {
+    "credentials": {
+      "accessKeyId": "local",
+      "secretAccessKey": "local"
+    },
+    "region": "us-east-1"
+  }
+}

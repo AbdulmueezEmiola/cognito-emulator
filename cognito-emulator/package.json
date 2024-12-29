@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "cognito-local": "^3.23.3"
+  }
+}

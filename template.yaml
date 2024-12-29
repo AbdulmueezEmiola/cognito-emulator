@@ -1,0 +1,170 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: "The environment to deploy (dev, staging, prod)."
+  AWSDefaultRegion:
+    Type: String
+    Default: "us-east-1"
+    Description: "AWS Default Region"
+  AWSAccountId:
+    Type: String
+    Default: "djkefewjk"
+    Description: "AWS Account ID"
+  ClientURL:
+    Type: String
+    Description: "The URL environment variable for CustomMessageLambdaFunction."
+    Default: "http://localhost:3000"
+  ServerURL:
+    Type: String
+    Description: "The URL environment variable for PostVerificationLambdaFunction."
+    Default: "http://host.docker.internal:8000/"
+  LocalAPIKey:
+    Type: String
+    Description: "The API Key to be used with the local backend environment"
+    Default: "testkey"
+
+Resources:
+  # Shared IAM Role for all Lambda Functions
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "mm-${Environment}-LambdaExecutionRole"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: GetSSMParameterPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource:
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*"
+              - Effect: Allow
+                Action:
+                  - kms:Decrypt
+                Resource: "*"
+        - PolicyName: LambdaBasicExecution
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*:*"
+
+  # Custom Message Lambda
+  CustomMessageLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "mm-${Environment}-cognito-triggers-CustomMessageFunction"
+      Handler: lambda_functions.custom_message.handler
+      Runtime: python3.9
+      CodeUri: .
+      Timeout: 60
+      MemorySize: 128
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          URL: !Ref ClientURL
+
+  CustomMessageLambdaInvocationPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt CustomMessageLambdaFunction.Arn
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !Sub arn:aws:cognito-idp:${AWSDefaultRegion}:${AWSAccountId}:userpool/*
+
+  # Post Verification Lambda
+  PostVerificationLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "mm-${Environment}-cognito-triggers-PostVerificationLambdaFunction"
+      Handler: lambda_functions.post_verification.handler
+      Runtime: python3.9
+      CodeUri: .
+      Timeout: 60
+      MemorySize: 128
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          URL: !Ref ServerURL
+          ENVIRONMENT: !Ref Environment
+          REGION: !Ref AWSDefaultRegion
+          LOCAL_API_KEY: !Ref LocalAPIKey
+
+  PostVerificationInvocationPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt PostVerificationLambdaFunction.Arn
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !Sub arn:aws:cognito-idp:${AWSDefaultRegion}:${AWSAccountId}:userpool/*
+
+  # Additional Lambda Functions
+  PreAuthenticationLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "mm-${Environment}-cognito-triggers-PreAuthenticationFunction"
+      Handler: lambda_functions.pre_authentication.handler
+      Runtime: python3.9
+      CodeUri: .
+      Timeout: 60
+      MemorySize: 128
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          URL: !Ref ServerURL
+          ENVIRONMENT: !Ref Environment
+          REGION: !Ref AWSDefaultRegion
+          LOCAL_API_KEY: !Ref LocalAPIKey
+
+  PostAuthenticationLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "mm-${Environment}-cognito-triggers-PostAuthenticationFunction"
+      Handler: lambda_functions.post_authentication.handler
+      Runtime: python3.9
+      CodeUri: .
+      Timeout: 60
+      MemorySize: 128
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          URL: !Ref ServerURL
+          ENVIRONMENT: !Ref Environment
+          REGION: !Ref AWSDefaultRegion
+          LOCAL_API_KEY: !Ref LocalAPIKey
+
+  MigrateToCognitoLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "mm-${Environment}-cognito-triggers-MigrateToCognitoFunction"
+      Handler: lambda_functions.migrate_to_cognito.handler
+      Runtime: python3.9
+      CodeUri: .
+      Timeout: 600
+      MemorySize: 128
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          URL: !Ref ServerURL
+          ENVIRONMENT: !Ref Environment
+          REGION: !Ref AWSDefaultRegion
+          LOCAL_API_KEY: !Ref LocalAPIKey
+/Users/abdulmueezemiola/repos/gitlab/mm-auth-triggers/.gitignore
