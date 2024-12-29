@@ -30,8 +30,6 @@ def handler(event, context):
         user_groups.append(synced_groups)
         event["request"]["groupConfiguration"]["groupsToOverride"] = user_groups
 
-    if "ADMIN" in user_groups:
-        return event
     route = get_route(user_groups)
     url = construct_url(route)
 
@@ -45,11 +43,8 @@ def get_route(user_groups):
     Factory function to determine the route based on user groups.
     """
     routes = {
-        "CLINICIAN": "clinician",
-        "FACILITY": "facility",
-        "FACILITY-SCHEDULER": "facility",
-        "FACILITY-OWNER": "facility",
-        "FACILITY-ADMIN": "facility",
+        "STUDENT": "STUDENT",
+        "TEACHER": "ADMIN",
     }
 
     for group in user_groups:
